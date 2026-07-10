@@ -24,7 +24,8 @@ Construido con **Next.js 14 (App Router) + TypeScript + Tailwind CSS** y
     delegación, rango de fechas) y **cambio de estado directo** desde la fila.
   - Badges de color por estado.
 - **Formulario** de alta y edición, validado y **optimizado para móvil**.
-- **Webhook a Make** al crear o actualizar un parte (no bloquea el guardado).
+- **Recordatorio diario a Make** (Vercel Cron): si algún parte lleva 10 o más
+  días en `Parado/Sin piezas`, se envía un único aviso al webhook de Make.
 - **Exportación** del listado filtrado a **Excel (.xlsx)** y **PDF**.
 - Diseño corporativo (azul marino `#0D1B4B` y amarillo `#F5C800`),
   totalmente responsive (móvil primero).
@@ -46,6 +47,7 @@ Construido con **Next.js 14 (App Router) + TypeScript + Tailwind CSS** y
 | `descripcion`        | text    |                                                   |
 | `material_utilizado` | text    | Opcional                                          |
 | `tiempo_trabajo`     | text    | Intervalos de 30 min (30 min … 10h), opcional     |
+| `parado_desde`       | tstz    | Desde cuándo está en `Parado/Sin piezas` (trigger)|
 | `created_by`         | uuid    | Usuario que lo creó                               |
 | `created_at`         | tstz    |                                                   |
 | `updated_at`         | tstz    | Se actualiza solo mediante trigger                |
@@ -85,13 +87,19 @@ NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
 SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
 MAKE_WEBHOOK_URL=https://hook.eu1.make.com/g3y641mo6f9r1ekdqix0k2t9s9bouypr
+CRON_SECRET=un-valor-aleatorio-seguro
 ```
 
 - `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`:
   **Settings → API** en Supabase.
-- `SUPABASE_SERVICE_ROLE_KEY`: **Settings → API → service_role**. Solo se usa
-  en el servidor (gestión de usuarios). **Nunca la expongas en el cliente.**
-- `MAKE_WEBHOOK_URL`: URL del webhook de Make.
+- `SUPABASE_SERVICE_ROLE_KEY`: **Settings → API → service_role**. Se usa
+  en el servidor (gestión de usuarios y el cron de recordatorios).
+  **Nunca la expongas en el cliente.**
+- `MAKE_WEBHOOK_URL`: URL del webhook de Make (recordatorio diario de
+  partes parados).
+- `CRON_SECRET`: secreto que protege la ruta del cron. Genera uno con
+  `openssl rand -hex 32`. Vercel Cron lo envía automáticamente como
+  `Authorization: Bearer <CRON_SECRET>`.
 
 ### 3. Ejecutar en local
 
@@ -109,30 +117,50 @@ Abre [http://localhost:3000](http://localhost:3000). Se te redirigirá a
 2. En [vercel.com](https://vercel.com) importa el repositorio.
 3. En **Settings → Environment Variables** añade las mismas variables del
    `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-   `SUPABASE_SERVICE_ROLE_KEY`, `MAKE_WEBHOOK_URL`).
-4. Deploy. Vercel detecta Next.js automáticamente.
+   `SUPABASE_SERVICE_ROLE_KEY`, `MAKE_WEBHOOK_URL`, `CRON_SECRET`).
+4. Deploy. Vercel detecta Next.js automáticamente y programa el cron
+   definido en [`vercel.json`](./vercel.json).
 
 ---
 
-## 🔌 Integración con Make (webhook)
+## ⏰ Recordatorio diario de partes parados (Vercel Cron + Make)
 
-Cada vez que se **crea** o **actualiza** un parte, el servidor envía un `POST`
-a `MAKE_WEBHOOK_URL` con el JSON completo del parte más un campo `evento`
-(`"creado"` o `"actualizado"`):
+Un **cron de Vercel** (ver [`vercel.json`](./vercel.json), una ejecución
+diaria — compatible con el plan Hobby) llama cada mañana a
+`/api/cron/recordatorio-parados`. La ruta:
+
+1. Comprueba la cabecera `Authorization: Bearer <CRON_SECRET>`; si no
+   coincide responde `401`.
+2. Busca partes con `estado_reparacion = 'Parado/Sin piezas'` y
+   `parado_desde` de hace **10 días o más**. La columna `parado_desde` se
+   mantiene por trigger en Supabase (ver
+   [`supabase/migracion_parado_desde.sql`](./supabase/migracion_parado_desde.sql)):
+   se fija al entrar en el estado y se limpia al salir, por lo que **no se
+   reinicia** al editar otros campos.
+3. Si hay al menos uno, envía **un único** `POST` a `MAKE_WEBHOOK_URL`:
 
 ```json
 {
-  "evento": "creado",
-  "id": "…",
-  "fecha": "2026-07-09",
-  "cliente": "Agrícola El Palmar S.L.",
-  "estado_reparacion": "En reparación",
-  "...": "..."
+  "evento": "recordatorio_parados",
+  "total": 2,
+  "partes": [
+    {
+      "id": "…",
+      "cliente": "Agrícola El Palmar S.L.",
+      "id_maquina": "005588-001",
+      "tipo_maquina": "Tractor",
+      "descripcion": "…",
+      "delegacion": "Suproval Cheste",
+      "fecha": "2026-06-15",
+      "parado_desde": "2026-06-20T09:12:00.000Z",
+      "dias_parado": 20
+    }
+  ]
 }
 ```
 
-Si el webhook falla, **el parte se guarda igualmente** (el error solo se
-registra en el log del servidor).
+4. Si no hay ninguno, no envía nada a Make. En ambos casos devuelve un
+   resumen JSON (`partes_encontrados`, `aviso_enviado`).
 
 ---
 
@@ -146,6 +174,8 @@ src/
 │   │   ├── partes/nuevo/      # Alta de parte
 │   │   ├── partes/[id]/       # Edición de parte
 │   │   └── usuarios/          # Gestión de usuarios (admin)
+│   ├── api/cron/
+│   │   └── recordatorio-parados/  # Cron diario: aviso a Make de parados
 │   ├── actions/               # Server Actions (partes, auth, usuarios)
 │   ├── login/                 # Página de login
 │   ├── layout.tsx
@@ -156,12 +186,13 @@ src/
 │   ├── constants.ts           # Estados, tipos, delegaciones, tiempos…
 │   ├── types.ts
 │   ├── partes-utils.ts        # Lógica de retrasos y resúmenes
-│   ├── webhook.ts             # Envío a Make
 │   └── export.ts              # Exportación Excel / PDF
 ├── middleware.ts              # Protección de rutas
 supabase/
 ├── schema.sql                 # Tablas + triggers + RLS
+├── migracion_parado_desde.sql # Migración: columna + trigger parado_desde
 └── seed.sql                   # 5 partes de ejemplo
+vercel.json                    # Cron diario de Vercel
 ```
 
 ---

@@ -41,6 +41,9 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/_next") ||
+    // Cron de Vercel: sin sesión de usuario; la ruta se protege
+    // por sí misma con la cabecera Authorization (CRON_SECRET).
+    pathname.startsWith("/api/cron") ||
     pathname === "/favicon.ico";
 
   // Sin sesión y ruta protegida -> redirigir a /login
