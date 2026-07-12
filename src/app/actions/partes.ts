@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { enviarWebhookMake } from "@/lib/webhook";
 import { ESTADOS_REPARACION } from "@/lib/constants";
 import type { EstadoReparacion } from "@/lib/constants";
 import type { ParteTaller } from "@/lib/types";
@@ -75,9 +74,6 @@ export async function crearParte(formData: FormData): Promise<ActionResult> {
 
   if (error) return { ok: false, error: error.message };
 
-  // Webhook a Make (no bloquea el guardado)
-  await enviarWebhookMake(data as ParteTaller, "creado");
-
   revalidatePath("/dashboard");
   return { ok: true, id: (data as ParteTaller).id };
 }
@@ -99,16 +95,12 @@ export async function actualizarParte(
   const { datos, errores } = parsearFormulario(formData);
   if (errores.length) return { ok: false, error: errores.join(" ") };
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("partes_taller")
     .update(datos)
-    .eq("id", id)
-    .select()
-    .single();
+    .eq("id", id);
 
   if (error) return { ok: false, error: error.message };
-
-  await enviarWebhookMake(data as ParteTaller, "actualizado");
 
   revalidatePath("/dashboard");
   revalidatePath(`/partes/${id}`);
@@ -133,16 +125,12 @@ export async function cambiarEstado(
     return { ok: false, error: "Estado no válido." };
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("partes_taller")
     .update({ estado_reparacion: nuevoEstado })
-    .eq("id", id)
-    .select()
-    .single();
+    .eq("id", id);
 
   if (error) return { ok: false, error: error.message };
-
-  await enviarWebhookMake(data as ParteTaller, "actualizado");
 
   revalidatePath("/dashboard");
   return { ok: true, id };

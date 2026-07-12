@@ -45,6 +45,7 @@ create table if not exists public.partes_taller (
   descripcion         text,
   material_utilizado  text,
   tiempo_trabajo      text,
+  parado_desde        timestamptz,
   created_by          uuid references public.profiles (id) on delete set null,
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now()
@@ -75,6 +76,40 @@ create trigger trg_partes_updated_at
   before update on public.partes_taller
   for each row
   execute function public.set_updated_at();
+
+-- ------------------------------------------------------------
+-- 3b. Trigger: rastrear desde cuándo un parte está en
+--     'Parado/Sin piezas' (columna parado_desde)
+-- ------------------------------------------------------------
+-- Solo actúa en las TRANSICIONES de estado; si el parte sigue en
+-- 'Parado/Sin piezas' no toca parado_desde (así no se reinicia al
+-- editar otros campos del parte).
+create or replace function public.track_parado_desde()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.estado_reparacion = 'Parado/Sin piezas' then
+      new.parado_desde = now();
+    else
+      new.parado_desde = null;
+    end if;
+  elsif new.estado_reparacion = 'Parado/Sin piezas'
+        and old.estado_reparacion is distinct from 'Parado/Sin piezas' then
+    new.parado_desde = now();
+  elsif new.estado_reparacion <> 'Parado/Sin piezas' then
+    new.parado_desde = null;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_partes_parado_desde on public.partes_taller;
+create trigger trg_partes_parado_desde
+  before insert or update on public.partes_taller
+  for each row
+  execute function public.track_parado_desde();
 
 -- ------------------------------------------------------------
 -- 4. Trigger: crear perfil automáticamente al registrarse
