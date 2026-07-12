@@ -13,6 +13,7 @@ export interface ParteTaller {
   descripcion: string | null;
   material_utilizado: string | null;
   tiempo_trabajo: string | null;
+  parado_desde: string | null; // desde cuándo está en 'Parado/Sin piezas' (trigger)
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -21,7 +22,7 @@ export interface ParteTaller {
 // Payload para crear/actualizar (sin campos gestionados por el servidor)
 export type ParteInput = Omit<
   ParteTaller,
-  "id" | "created_by" | "created_at" | "updated_at"
+  "id" | "parado_desde" | "created_by" | "created_at" | "updated_at"
 >;
 
 export interface Profile {
