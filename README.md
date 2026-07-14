@@ -159,8 +159,19 @@ diaria — compatible con el plan Hobby) llama cada mañana a
 }
 ```
 
-4. Si no hay ninguno, no envía nada a Make. En ambos casos devuelve un
-   resumen JSON (`partes_encontrados`, `aviso_enviado`).
+4. Si no hay ninguno, no envía nada a Make. En todos los casos la ruta
+   devuelve un resumen JSON:
+   - Éxito con envío: `{ "ok": true, "encontrados": N, "enviado": true }`
+   - Sin partes que avisar: `{ "ok": true, "encontrados": 0, "enviado": false }`
+   - Error controlado: `{ "ok": false, "paso": "<dónde falló>", "error": "…" }`
+     (el detalle completo queda en los logs de Vercel).
+
+> **Importante:** el cron usa la `SUPABASE_SERVICE_ROLE_KEY`, y el rol
+> `service_role` necesita privilegios SQL sobre las tablas además de
+> saltarse RLS. Si ves `permission denied for table partes_taller`
+> (código 42501), ejecuta
+> [`supabase/fix_permisos_service_role.sql`](./supabase/fix_permisos_service_role.sql)
+> en el SQL Editor de Supabase.
 
 ---
 
