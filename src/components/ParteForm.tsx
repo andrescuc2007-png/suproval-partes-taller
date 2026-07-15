@@ -151,15 +151,35 @@ export function ParteForm({ parte }: Props) {
         {/* ID Máquina */}
         <div>
           <label htmlFor="id_maquina" className="label">
-            ID Máquina
+            ID Máquina <span className="text-red-500">*</span>
           </label>
           <input
             id="id_maquina"
             name="id_maquina"
             type="text"
+            required
             defaultValue={parte?.id_maquina ?? ""}
             className="input"
             placeholder="Ej: 005588-001"
+          />
+        </div>
+
+        {/* Horómetro */}
+        <div>
+          <label htmlFor="horometro" className="label">
+            Horómetro (horas de máquina){" "}
+            <span className="text-slate-400">(opcional)</span>
+          </label>
+          <input
+            id="horometro"
+            name="horometro"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.1"
+            defaultValue={parte?.horometro ?? ""}
+            className="input"
+            placeholder="Ej: 3450"
           />
         </div>
 

@@ -8,6 +8,7 @@ export interface ParteTaller {
   telefono: string | null;
   id_maquina: string | null;
   tipo_maquina: string | null;
+  horometro: number | null; // horas de máquina, opcional
   estado_reparacion: EstadoReparacion;
   delegacion: Delegacion | null;
   descripcion: string | null;

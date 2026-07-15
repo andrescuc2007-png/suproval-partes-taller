@@ -102,6 +102,11 @@ export function PartesTable({ partes, esAdmin }: Props) {
                 >
                   <td className="whitespace-nowrap px-3 py-3">
                     <div>{formatFecha(p.fecha)}</div>
+                    {(p.creador?.nombre || p.creador?.email) && (
+                      <div className="mt-0.5 text-[10px] text-slate-400">
+                        por {p.creador.nombre || p.creador.email}
+                      </div>
+                    )}
                     {retrasado && (
                       <div className="mt-1 text-[10px] font-semibold text-red-600">
                         {diasDesde(p.fecha)} días
@@ -174,6 +179,9 @@ export function PartesTable({ partes, esAdmin }: Props) {
                 {p.tipo_maquina && <span>{p.tipo_maquina}</span>}
                 {p.delegacion && <span>{p.delegacion}</span>}
                 {p.telefono && <span>{p.telefono}</span>}
+                {(p.creador?.nombre || p.creador?.email) && (
+                  <span>por {p.creador.nombre || p.creador.email}</span>
+                )}
               </div>
 
               <div className="mb-3">

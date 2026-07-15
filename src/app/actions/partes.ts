@@ -16,11 +16,13 @@ export interface ActionResult {
 function parsearFormulario(formData: FormData) {
   const cliente = (formData.get("cliente") as string)?.trim();
   const telefono = (formData.get("telefono") as string)?.trim() || null;
+  const id_maquina = (formData.get("id_maquina") as string)?.trim() || null;
   const estado = formData.get("estado_reparacion") as EstadoReparacion;
 
   const errores: string[] = [];
 
   if (!cliente) errores.push("El cliente es obligatorio.");
+  if (!id_maquina) errores.push("El ID de máquina es obligatorio.");
 
   if (telefono) {
     // Formato de teléfono flexible: 9-15 dígitos, admite +, espacios y guiones
@@ -34,13 +36,26 @@ function parsearFormulario(formData: FormData) {
     errores.push("Estado de reparación no válido.");
   }
 
+  // Horómetro: opcional, pero si viene debe ser un número >= 0
+  const horometroRaw = (formData.get("horometro") as string)?.trim();
+  let horometro: number | null = null;
+  if (horometroRaw) {
+    const n = Number(horometroRaw.replace(",", "."));
+    if (!Number.isFinite(n) || n < 0) {
+      errores.push("El horómetro debe ser un número igual o mayor que 0.");
+    } else {
+      horometro = n;
+    }
+  }
+
   const datos = {
     fecha: (formData.get("fecha") as string) || null,
     serie: (formData.get("serie") as string)?.trim() || null,
     cliente,
     telefono,
-    id_maquina: (formData.get("id_maquina") as string)?.trim() || null,
+    id_maquina,
     tipo_maquina: (formData.get("tipo_maquina") as string)?.trim() || null,
+    horometro,
     estado_reparacion: estado || ESTADOS_REPARACION[0],
     delegacion: (formData.get("delegacion") as string) || null,
     descripcion: (formData.get("descripcion") as string)?.trim() || null,
