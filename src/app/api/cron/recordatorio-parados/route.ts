@@ -28,6 +28,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  try {
+    return await ejecutarRecordatorio();
+  } catch (err) {
+    console.error("[cron recordatorio-parados] Error inesperado:", err);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      },
+      { status: 500 }
+    );
+  }
+}
+
+async function ejecutarRecordatorio() {
   // Cliente service_role: el cron no tiene sesión de usuario y la
   // tabla tiene RLS que exige usuario autenticado.
   const supabase = createAdminClient();
@@ -45,9 +60,18 @@ export async function GET(request: Request) {
     .order("parado_desde", { ascending: true });
 
   if (error) {
-    console.error("[cron recordatorio-parados] Error de Supabase:", error);
+    console.error(
+      "[cron recordatorio-parados] Error de Supabase:",
+      JSON.stringify(error)
+    );
     return NextResponse.json(
-      { ok: false, error: error.message },
+      {
+        ok: false,
+        error: error.message,
+        detalle: error.details ?? null,
+        pista: error.hint ?? null,
+        codigo: error.code ?? null,
+      },
       { status: 500 }
     );
   }
