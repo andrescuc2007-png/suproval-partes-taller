@@ -8,7 +8,7 @@ import {
   TIEMPOS_TRABAJO,
   TIPOS_MAQUINA,
 } from "@/lib/constants";
-import type { ParteTaller } from "@/lib/types";
+import type { MaterialLinea, ParteTaller } from "@/lib/types";
 import { hoyISO } from "@/lib/partes-utils";
 import { crearParte, actualizarParte } from "@/app/actions/partes";
 
@@ -33,6 +33,35 @@ export function ParteForm({ parte }: Props) {
   const [tipoLibre, setTipoLibre] = useState(
     tipoEsPredefinido ? "" : tipoInicial
   );
+
+  // Material utilizado: líneas repetibles (nombre + cantidad, sin precio)
+  const [materialLineas, setMaterialLineas] = useState<MaterialLinea[]>(
+    parte?.material_lineas ?? []
+  );
+  const materialLegado = parte?.material_utilizado?.trim() || null;
+
+  function agregarLineaMaterial() {
+    setMaterialLineas((prev) => [...prev, { nombre: "", cantidad: 1 }]);
+  }
+  function actualizarLineaMaterial(
+    index: number,
+    campo: "nombre" | "cantidad",
+    valor: string
+  ) {
+    setMaterialLineas((prev) =>
+      prev.map((linea, i) =>
+        i === index
+          ? {
+              ...linea,
+              [campo]: campo === "cantidad" ? Number(valor) : valor,
+            }
+          : linea
+      )
+    );
+  }
+  function eliminarLineaMaterial(index: number) {
+    setMaterialLineas((prev) => prev.filter((_, i) => i !== index));
+  }
 
   // Validación de teléfono en cliente
   const [telefonoError, setTelefonoError] = useState<string | null>(null);
@@ -78,6 +107,7 @@ export function ParteForm({ parte }: Props) {
         form.reset();
         setTipoSelect("");
         setTipoLibre("");
+        setMaterialLineas([]);
         setTelefonoError(null);
         setOk("Parte guardado correctamente. Puedes registrar el siguiente.");
         router.refresh();
@@ -314,19 +344,65 @@ export function ParteForm({ parte }: Props) {
         />
       </div>
 
-      {/* Material utilizado */}
+      {/* Material utilizado (líneas repetibles: nombre + cantidad) */}
       <div>
-        <label htmlFor="material_utilizado" className="label">
+        <label className="label">
           Material utilizado <span className="text-slate-400">(opcional)</span>
         </label>
-        <textarea
-          id="material_utilizado"
-          name="material_utilizado"
-          rows={3}
-          defaultValue={parte?.material_utilizado ?? ""}
-          className="input"
-          placeholder="Piezas y materiales empleados"
-        />
+
+        {materialLegado && (
+          <div className="mb-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <p className="mb-1 text-xs font-semibold text-slate-400">
+              Material (formato antiguo, solo lectura)
+            </p>
+            <p className="whitespace-pre-wrap">{materialLegado}</p>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {materialLineas.map((linea, i) => (
+            <div key={i} className="flex gap-2">
+              <input
+                type="text"
+                name="material_nombre"
+                value={linea.nombre}
+                onChange={(e) =>
+                  actualizarLineaMaterial(i, "nombre", e.target.value)
+                }
+                className="input flex-1"
+                placeholder="Pieza o material"
+              />
+              <input
+                type="number"
+                name="material_cantidad"
+                min="0"
+                step="1"
+                value={linea.cantidad}
+                onChange={(e) =>
+                  actualizarLineaMaterial(i, "cantidad", e.target.value)
+                }
+                className="input w-24"
+                placeholder="Cant."
+              />
+              <button
+                type="button"
+                onClick={() => eliminarLineaMaterial(i)}
+                className="btn-outline px-3"
+                aria-label="Eliminar línea"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={agregarLineaMaterial}
+          className="btn-outline mt-2"
+        >
+          + Añadir material
+        </button>
       </div>
 
       {/* Acciones */}

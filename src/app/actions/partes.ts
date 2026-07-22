@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { ESTADOS_REPARACION } from "@/lib/constants";
 import type { EstadoReparacion } from "@/lib/constants";
-import type { ParteTaller } from "@/lib/types";
+import type { MaterialLinea, ParteTaller } from "@/lib/types";
 
 export interface ActionResult {
   ok: boolean;
@@ -48,6 +48,18 @@ function parsearFormulario(formData: FormData) {
     }
   }
 
+  // Material utilizado: líneas repetibles (nombre + cantidad, sin precio).
+  // El texto libre antiguo (material_utilizado) ya no se escribe desde
+  // aquí; se deja intacto en los partes que ya lo tenían.
+  const nombresMaterial = formData.getAll("material_nombre") as string[];
+  const cantidadesMaterial = formData.getAll("material_cantidad") as string[];
+  const materialLineas: MaterialLinea[] = nombresMaterial
+    .map((nombre, i) => ({
+      nombre: nombre.trim(),
+      cantidad: Number(cantidadesMaterial[i]) || 0,
+    }))
+    .filter((linea) => linea.nombre);
+
   const datos = {
     fecha: (formData.get("fecha") as string) || null,
     serie: (formData.get("serie") as string)?.trim() || null,
@@ -59,8 +71,7 @@ function parsearFormulario(formData: FormData) {
     estado_reparacion: estado || ESTADOS_REPARACION[0],
     delegacion: (formData.get("delegacion") as string) || null,
     descripcion: (formData.get("descripcion") as string)?.trim() || null,
-    material_utilizado:
-      (formData.get("material_utilizado") as string)?.trim() || null,
+    material_lineas: materialLineas.length ? materialLineas : null,
     tiempo_trabajo: (formData.get("tiempo_trabajo") as string) || null,
   };
 

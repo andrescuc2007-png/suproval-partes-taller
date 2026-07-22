@@ -46,6 +46,7 @@ create table if not exists public.partes_taller (
                         )),
   descripcion         text,
   material_utilizado  text,
+  material_lineas     jsonb,
   tiempo_trabajo      text,
   parado_desde        timestamptz,
   created_by          uuid references public.profiles (id) on delete set null,

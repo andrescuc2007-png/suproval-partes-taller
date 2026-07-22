@@ -20,6 +20,17 @@ const CABECERAS = [
   "Tiempo trabajo",
 ];
 
+// Texto de material: líneas estructuradas si existen, si no el texto
+// libre antiguo (partes creados antes de la Fase 2-A).
+function materialTexto(p: ParteTaller): string {
+  if (p.material_lineas?.length) {
+    return p.material_lineas
+      .map((l) => `${l.nombre} x${l.cantidad}`)
+      .join(", ");
+  }
+  return p.material_utilizado ?? "";
+}
+
 function filaDesdeParte(p: ParteTaller): (string | number)[] {
   return [
     formatFecha(p.fecha),
@@ -31,7 +42,7 @@ function filaDesdeParte(p: ParteTaller): (string | number)[] {
     p.estado_reparacion ?? "",
     p.delegacion ?? "",
     p.descripcion ?? "",
-    p.material_utilizado ?? "",
+    materialTexto(p),
     p.tiempo_trabajo ?? "",
   ];
 }

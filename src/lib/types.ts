@@ -1,5 +1,11 @@
 import type { Delegacion, EstadoReparacion, Rol } from "./constants";
 
+// Línea de material estructurado (sin precio)
+export interface MaterialLinea {
+  nombre: string;
+  cantidad: number;
+}
+
 export interface ParteTaller {
   id: string;
   fecha: string; // ISO date (YYYY-MM-DD)
@@ -12,7 +18,8 @@ export interface ParteTaller {
   estado_reparacion: EstadoReparacion;
   delegacion: Delegacion | null;
   descripcion: string | null;
-  material_utilizado: string | null;
+  material_utilizado: string | null; // formato antiguo (texto libre); ya no se escribe, solo se conserva para partes previos
+  material_lineas: MaterialLinea[] | null;
   tiempo_trabajo: string | null;
   parado_desde: string | null; // desde cuándo está en 'Parado/Sin piezas' (trigger)
   created_by: string | null;
