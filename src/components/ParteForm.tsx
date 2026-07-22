@@ -20,6 +20,7 @@ export function ParteForm({ parte }: Props) {
   const router = useRouter();
   const esEdicion = Boolean(parte);
   const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Tipo de máquina: soporta valor libre además de las opciones
@@ -51,7 +52,9 @@ export function ParteForm({ parte }: Props) {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    const formData = new FormData(e.currentTarget);
+    setOk(null);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
 
     // Resolver tipo_maquina (libre vs predefinido)
     const tipoFinal =
@@ -66,10 +69,22 @@ export function ParteForm({ parte }: Props) {
         : await crearParte(formData);
 
       if (res.ok) {
-        router.push("/dashboard");
+        if (esEdicion) {
+          router.push("/dashboard");
+          router.refresh();
+          return;
+        }
+        // Alta: confirmar y dejar el formulario listo para el siguiente parte
+        form.reset();
+        setTipoSelect("");
+        setTipoLibre("");
+        setTelefonoError(null);
+        setOk("Parte guardado correctamente. Puedes registrar el siguiente.");
         router.refresh();
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         setError(res.error ?? "No se pudo guardar el parte.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     });
   }
@@ -79,6 +94,18 @@ export function ParteForm({ parte }: Props) {
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
+        </div>
+      )}
+      {ok && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          <span>✓ {ok}</span>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="whitespace-nowrap font-semibold text-green-800 underline"
+          >
+            Ver partes
+          </button>
         </div>
       )}
 
@@ -151,15 +178,35 @@ export function ParteForm({ parte }: Props) {
         {/* ID Máquina */}
         <div>
           <label htmlFor="id_maquina" className="label">
-            ID Máquina
+            ID Máquina <span className="text-red-500">*</span>
           </label>
           <input
             id="id_maquina"
             name="id_maquina"
             type="text"
+            required
             defaultValue={parte?.id_maquina ?? ""}
             className="input"
             placeholder="Ej: 005588-001"
+          />
+        </div>
+
+        {/* Horómetro */}
+        <div>
+          <label htmlFor="horometro" className="label">
+            Horómetro (horas de máquina){" "}
+            <span className="text-slate-400">(opcional)</span>
+          </label>
+          <input
+            id="horometro"
+            name="horometro"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.1"
+            defaultValue={parte?.horometro ?? ""}
+            className="input"
+            placeholder="Ej: 3450"
           />
         </div>
 

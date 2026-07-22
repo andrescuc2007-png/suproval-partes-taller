@@ -16,6 +16,11 @@ interface Props {
   currentUserId: string;
 }
 
+const ROL_LABEL: Record<Rol, string> = {
+  admin: "Administrador",
+  mecanico: "Mecánico",
+};
+
 export function UsuariosClient({ usuarios, currentUserId }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -109,8 +114,9 @@ export function UsuariosClient({ usuarios, currentUserId }: Props) {
               name="password"
               type="password"
               required
-              minLength={6}
+              minLength={8}
               className="input"
+              placeholder="Mínimo 8 caracteres"
             />
           </div>
           <div>
@@ -118,7 +124,7 @@ export function UsuariosClient({ usuarios, currentUserId }: Props) {
             <select name="rol" defaultValue="mecanico" className="input">
               {ROLES.map((r) => (
                 <option key={r} value={r}>
-                  {r}
+                  {ROL_LABEL[r]}
                 </option>
               ))}
             </select>
@@ -173,7 +179,7 @@ export function UsuariosClient({ usuarios, currentUserId }: Props) {
                       >
                         {ROLES.map((r) => (
                           <option key={r} value={r}>
-                            {r}
+                            {ROL_LABEL[r]}
                           </option>
                         ))}
                       </select>

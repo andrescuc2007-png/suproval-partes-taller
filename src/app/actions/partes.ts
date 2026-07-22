@@ -16,11 +16,13 @@ export interface ActionResult {
 function parsearFormulario(formData: FormData) {
   const cliente = (formData.get("cliente") as string)?.trim();
   const telefono = (formData.get("telefono") as string)?.trim() || null;
+  const id_maquina = (formData.get("id_maquina") as string)?.trim() || null;
   const estado = formData.get("estado_reparacion") as EstadoReparacion;
 
   const errores: string[] = [];
 
   if (!cliente) errores.push("El cliente es obligatorio.");
+  if (!id_maquina) errores.push("El ID de máquina es obligatorio.");
 
   if (telefono) {
     // Formato de teléfono flexible: 9-15 dígitos, admite +, espacios y guiones
@@ -34,13 +36,26 @@ function parsearFormulario(formData: FormData) {
     errores.push("Estado de reparación no válido.");
   }
 
+  // Horómetro: opcional, pero si viene debe ser un número >= 0
+  const horometroRaw = (formData.get("horometro") as string)?.trim();
+  let horometro: number | null = null;
+  if (horometroRaw) {
+    const n = Number(horometroRaw.replace(",", "."));
+    if (!Number.isFinite(n) || n < 0) {
+      errores.push("El horómetro debe ser un número igual o mayor que 0.");
+    } else {
+      horometro = n;
+    }
+  }
+
   const datos = {
     fecha: (formData.get("fecha") as string) || null,
     serie: (formData.get("serie") as string)?.trim() || null,
     cliente,
     telefono,
-    id_maquina: (formData.get("id_maquina") as string)?.trim() || null,
+    id_maquina,
     tipo_maquina: (formData.get("tipo_maquina") as string)?.trim() || null,
+    horometro,
     estado_reparacion: estado || ESTADOS_REPARACION[0],
     delegacion: (formData.get("delegacion") as string) || null,
     descripcion: (formData.get("descripcion") as string)?.trim() || null,
@@ -72,7 +87,13 @@ export async function crearParte(formData: FormData): Promise<ActionResult> {
     .select()
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    console.error("[partes] Error al crear el parte:", error);
+    return {
+      ok: false,
+      error: "No se pudo guardar el parte. Inténtalo de nuevo en unos segundos.",
+    };
+  }
 
   revalidatePath("/dashboard");
   return { ok: true, id: (data as ParteTaller).id };
@@ -100,7 +121,14 @@ export async function actualizarParte(
     .update(datos)
     .eq("id", id);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    console.error("[partes] Error al actualizar el parte:", error);
+    return {
+      ok: false,
+      error:
+        "No se pudieron guardar los cambios. Inténtalo de nuevo en unos segundos.",
+    };
+  }
 
   revalidatePath("/dashboard");
   revalidatePath(`/partes/${id}`);
@@ -130,7 +158,13 @@ export async function cambiarEstado(
     .update({ estado_reparacion: nuevoEstado })
     .eq("id", id);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    console.error("[partes] Error al cambiar el estado:", error);
+    return {
+      ok: false,
+      error: "No se pudo cambiar el estado. Inténtalo de nuevo.",
+    };
+  }
 
   revalidatePath("/dashboard");
   return { ok: true, id };
@@ -149,7 +183,14 @@ export async function eliminarParte(id: string): Promise<ActionResult> {
 
   const { error } = await supabase.from("partes_taller").delete().eq("id", id);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    console.error("[partes] Error al eliminar el parte:", error);
+    return {
+      ok: false,
+      error:
+        "No se pudo eliminar el parte. Solo un administrador puede eliminar partes.",
+    };
+  }
 
   revalidatePath("/dashboard");
   return { ok: true };

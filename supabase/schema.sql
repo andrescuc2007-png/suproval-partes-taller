@@ -27,6 +27,8 @@ create table if not exists public.partes_taller (
   telefono            text,
   id_maquina          text,
   tipo_maquina        text,
+  horometro           numeric
+                        check (horometro is null or horometro >= 0),
   estado_reparacion   text not null default 'Pte. llegada a taller'
                         check (estado_reparacion in (
                           'Pte. llegada a taller',

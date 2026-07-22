@@ -5,9 +5,10 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Suproval — Partes de Taller",
+  title: "Partes de Taller – Suproval",
   description:
     "Sistema de registro y seguimiento de partes de taller de Suproval",
+  applicationName: "Partes de Taller – Suproval",
 };
 
 export const viewport: Viewport = {
