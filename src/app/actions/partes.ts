@@ -87,7 +87,13 @@ export async function crearParte(formData: FormData): Promise<ActionResult> {
     .select()
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    console.error("[partes] Error al crear el parte:", error);
+    return {
+      ok: false,
+      error: "No se pudo guardar el parte. Inténtalo de nuevo en unos segundos.",
+    };
+  }
 
   revalidatePath("/dashboard");
   return { ok: true, id: (data as ParteTaller).id };
@@ -115,7 +121,14 @@ export async function actualizarParte(
     .update(datos)
     .eq("id", id);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    console.error("[partes] Error al actualizar el parte:", error);
+    return {
+      ok: false,
+      error:
+        "No se pudieron guardar los cambios. Inténtalo de nuevo en unos segundos.",
+    };
+  }
 
   revalidatePath("/dashboard");
   revalidatePath(`/partes/${id}`);
@@ -145,7 +158,13 @@ export async function cambiarEstado(
     .update({ estado_reparacion: nuevoEstado })
     .eq("id", id);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    console.error("[partes] Error al cambiar el estado:", error);
+    return {
+      ok: false,
+      error: "No se pudo cambiar el estado. Inténtalo de nuevo.",
+    };
+  }
 
   revalidatePath("/dashboard");
   return { ok: true, id };
@@ -164,7 +183,14 @@ export async function eliminarParte(id: string): Promise<ActionResult> {
 
   const { error } = await supabase.from("partes_taller").delete().eq("id", id);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    console.error("[partes] Error al eliminar el parte:", error);
+    return {
+      ok: false,
+      error:
+        "No se pudo eliminar el parte. Solo un administrador puede eliminar partes.",
+    };
+  }
 
   revalidatePath("/dashboard");
   return { ok: true };
